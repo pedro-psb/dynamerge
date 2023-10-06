@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dynamerge"
+authors = [
+    {name = "Pedro Pessoa", email = "pedropsb95@gmail.com"},
+]
+description = "Prototype for new dynaconf merge engine"
+readme = "README.md"
+requires-python = ">=3.8"
+# license = {text = "BSD-3-Clause"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "icecream",
+    "pytest",
+    "dynaconf",
+    'importlib-metadata; python_version<"3.8"',
+]
+# dynamic = ["version"]
+
+# [project.scripts]
+# dynamerge = "dynamerge.cli:main"
