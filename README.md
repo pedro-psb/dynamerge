@@ -37,7 +37,7 @@ Some possibilities:
 
 ```python
 $ pip install -e .
-$ python -m dynamerge.main
+$ dynamerge-diff-cases
 ```
 
 ## Configurables assets

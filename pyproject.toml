@@ -23,5 +23,5 @@ dependencies = [
 ]
 # dynamic = ["version"]
 
-# [project.scripts]
-# dynamerge = "dynamerge.cli:main"
+[project.scripts]
+dynamerge-diff-cases = "dynamerge.diff_cases:main"
