@@ -8,7 +8,7 @@ import pytest
         ("dynaconf_merge", "merge", False, True),
         ("dynaconf_merge_unique", "merge_unique", False, True),
         ("dynaconf_merge=false", "merge", True, False),
-        ("@dict_id_key=foo", "dict_id_key", "dynaconf_id", "foo"),
+        ("@dict_id_key=foo", "dict_id_key_override", "dynaconf_id", "foo"),
     ],
 )
 def test_pop_and_load_list_scope(
