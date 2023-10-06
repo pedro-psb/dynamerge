@@ -1,6 +1,6 @@
 # Merge Engine Prototype for Dynaconf 3.x
 
-This is a prototype of a new merge engine to replace the old one.
+This is a prototype of a new merge engine to dynaconf v3.x
 
 The main goals are:
 
@@ -35,10 +35,7 @@ Some possibilities:
 
 ## Preview
 
-(not tested like that yet)
-
 ```python
-$ pip install -r requirements.txt
 $ pip install -e .
 $ python -m dynamerge.main
 ```

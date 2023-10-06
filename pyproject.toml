@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dynamerge"
+version = "0.1.0"
 authors = [
     {name = "Pedro Pessoa", email = "pedropsb95@gmail.com"},
 ]

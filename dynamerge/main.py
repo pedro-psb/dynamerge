@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from pprint import pprint
 from typing import TypeAlias, NamedTuple, Literal
 from icecream import ic
-from loguru import logger
 import enum
 
 
@@ -359,7 +358,6 @@ def diff_report(name, old, new, diff_fn, **kwargs):
 
 
 def list_merge_use_index_cases():
-    logger.info("list_merge(a,b) with use_index")
     diff_report(
         "list mode: positional",
         [1, 2, 3, 4],
