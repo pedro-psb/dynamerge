@@ -1,17 +1,13 @@
 """
-Differ module.
+KeyDiffer module.
 
 Responsible for creating diff objects from
 container, such as dicts and lists.
 """
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
-from pprint import pprint
-from typing import TypeAlias, NamedTuple, Literal
-from icecream import ic
-import enum
+from typing import NamedTuple, Literal, TypeAlias
 
 
 class PseudoIdStrategies:
@@ -61,35 +57,67 @@ class PseudoIdStrategies:
 
         return return_dict
 
-class Differ:
+
+from icecream import ic
+
+
+class KeyDiffer:
+    """
+    Provide function to diff containers by key only (no value compare).
+
+    This is mostly usefull for generalizing compares among list and dicts and
+    providing a flexible way of mapping their key-diffs with custom value compares
+    or merging strategies.
+    """
+
     pseudo_id_strategies = PseudoIdStrategies
 
     @staticmethod
-    def list_scope(
-        old,
-        new,
+    def diff_dict(
+        old: dict,
+        new: dict,
         merge_policy: MergePolicy = None,
-        tree_path: TreePath = None,
+    ) -> list[KeyDiff]:
+        """Return a KeyDiff lists (old,new)."""
+        merge_policy = merge_policy or MergePolicy()
+        mark_list = ScopeParser.parse_from_dict(new)
+        merge_policy.load_from_mark_list(mark_list)
+        diffs = DiffList()
+
+        union_keys = old.keys() | new.keys()
+        for id_key in union_keys:
+            diff_pair = (old.get(id_key), new.get(id_key))
+            real_key_pair = (id_key, id_key)  # this is usefull only for lists
+
+            diff_object = KeyDiff(id_key, diff_pair, real_key_pair)
+            diffs.append(diff_object)
+        return diffs
+
+    @staticmethod
+    def diff_list(
+        old: list,
+        new: list,
+        merge_policy: MergePolicy = None,
         pseudo_id_strategy=None,
-    ):
-        """Return a ShallowDiff lists (old,new)."""
+    ) -> list[KeyDiff]:
+        """Return a KeyDiff lists (old,new)."""
         pseudo_id_mapper = pseudo_id_strategy or PseudoIdStrategies.use_index
         merge_policy = merge_policy or MergePolicy()
-        merge_policy.pop_and_load_list_scope(new)
+        merge_policy.load_from_mark_list(ScopeParser.parse_from_list(new))
+        diffs = DiffList()
 
         # maps {old.pseudo_id -> old.index},
         # - pseudo_id is a generated id from the list-item (for identify comparision)
         # - index is the address of the item in the original list
         old_pseudo_id_map = pseudo_id_mapper(
-            "old", old, dict_key_override=merge_policy.dict_id_key_override
+            "old", old, dict_key_override=merge_policy.dict_id_key
         )
         new_pseudo_id_map = pseudo_id_mapper(
-            "new", new, dict_key_override=merge_policy.dict_id_key_override
+            "new", new, dict_key_override=merge_policy.dict_id_key
         )
 
         union_keys = old_pseudo_id_map.keys() | new_pseudo_id_map.keys()
 
-        diffs = DiffList()
         for id_key in union_keys:
             # get index from pseudo_id
             old_index_key = old_pseudo_id_map.get(id_key, None)
@@ -99,20 +127,25 @@ class Differ:
             old_value = old[old_index_key] if old_index_key is not None else None
             new_value = new[new_index_key] if new_index_key is not None else None
 
-            # populate ShallowDiff
+            # populate KeyDiff
             diff_pair = (old_value, new_value)
             real_key_pair = (old_index_key, new_index_key)
 
-            diff_object = ShallowDiff(id_key, diff_pair, real_key_pair)
+            diff_object = KeyDiff(id_key, diff_pair, real_key_pair)
             diffs.append(diff_object)
         return diffs
 
 
-
-
-class ShallowDiff(NamedTuple):
+class KeyDiff(NamedTuple):
     """
-    A single-level diff of containers.
+    A key-based diff representation of containers (dicts and lists).
+    It contain the representaiton of keys or pseudo-keys (for lists) conflicts only.
+
+    The purpose of this is to allow a future diff-interpreter to apply different
+    meanings to a key-conflict, providing more fine-control of the merging process.
+
+    For example, it could take Diff(id_key="a", diff_pair=(1,1)) and merge that
+    into "a" as  [1,1] or 2 ("a": [1,2] or "a": [1,2]).
 
     Args:
         identity_key: The key used for id comparision (is a pseudo-key for list items)
@@ -120,51 +153,14 @@ class ShallowDiff(NamedTuple):
         real_key_pair: A pair of (old-real-key, new-real-key).
             In lists, it's the index. It may differ from identity_key, dependening
             on the pseudo-key generation strategy.
+
     Examples:
-        To understand why it is shallow, notice how it doesn't compare values,
-        just keys or pseudo-keys.
-
-        This allows a future diff-interpreter to take give different meaning
-        to this, allowing configurable fine-control of the merging process.
-        For example, it could take Diff(id_key="a", diff_pair=(1,1)) and merge that
-        into "a" as  [1,1] or 2 ("a": [1,2] or "a": [1,2]).
-
         {a: A, b: B}
         {a: A, b: B, c: C}
         ------------------
         Diff(a,    diff_pair=(A, A),        real_key_pair=(a, a))
         Diff(b,    diff_pair=(B, B),        real_key_pair=(a, a))
         Diff(c,    diff_pair=(EMPTY, B),    real_key_pair=(a, a))
-
-        # list merge [pseudo-key.use_index]
-        # uses positional comparision (by index)
-        [1, {...}, 3]
-        [3, {...}, 1]
-        ------------------
-        Diff(0,    diff_pair=(1, 3),        real_key_pair=(0, 0))
-        Diff(1,    diff_pair=({...}, {...}),        real_key_pair=(1, 1))
-        Diff(2,    diff_pair=(3, 1),    real_key_pair=(2, 2))
-
-        # list merge [pseudo-key.use_value_hash]
-        # - generates id_key from value_hash.
-        # - uses random uuid4 for unhashable values.
-        [1, {...}, 3]
-        [3, {...}, 1]
-        ------------------
-        Diff(id_key=1,        diff_pair=(1, 1),            real_key_pair=(0, 2))
-        Diff(id_key=3,        diff_pair=(3, 3),            real_key_pair=(2, 0))
-        Diff(id_key=uuid-a,   diff_pair=({...}, EMPTY),    real_key_pair=(a, a))
-        Diff(id_key=uuid-b,   diff_pair=(EMPTY, {...}),    real_key_pair=(a, a))
-
-        # list merge [pseudo-key.use_value_hash + special dict-id]
-        # - generates id_key from value_hash
-        # - uses id_mark inside dict to produce it's pseudo id_key
-        [1, {id_mark=x, ...}, 3]
-        [3, {id_mark=x, ...}, 1]
-        ------------------
-        Diff(id_key=1,    diff_pair=(1, 1),            real_key_pair=(0, 2))
-        Diff(id_key=3,    diff_pair=(3, 3),            real_key_pair=(2, 0))
-        Diff(id_key=x,    diff_pair=({...}, {...}),    real_key_pair=(a, a))
     """
 
     id_key: str
@@ -176,7 +172,7 @@ class ShallowDiff(NamedTuple):
 class DiffList:
     _diff_list: list = field(default_factory=list)
 
-    def append(self, diff: ShallowDiff):
+    def append(self, diff: KeyDiff):
         self._diff_list.append(diff)
 
     def get(
@@ -184,14 +180,23 @@ class DiffList:
         filter_attr: Literal["id_key"]
         | Literal["diff_pair"]
         | Literal["real_key_pair"] = None,
+        filter_attr_pair: tuple[str, str] = None,
     ):
         """
-        Return list of ShallowDiff or subset of its attr (defined in filter_attr)
+        Return list of KeyDiff, optionally with a single or pari attr filter.
+
         Args:
             filter_attr: return only the specified diff.attr from the diffs
+            filter_attr_pair: return tuple pair with (diff.attr1, diff.attr2)
         """
         if filter_attr is not None:
             return (getattr(diff, filter_attr) for diff in self._diff_list)
+        if filter_attr_pair is not None:
+            attr_key, attr_value = filter_attr_pair
+            return (
+                (getattr(diff, attr_key), getattr(diff, attr_value))
+                for diff in self._diff_list
+            )
         return self._diff_list
 
     def sort(self, by_attr: str = "id_key", by_attr_secondary: str = None):
@@ -199,11 +204,57 @@ class DiffList:
         self._diff_list.sort(key=lambda item: str(getattr(item, by_attr)))
         return self
 
+    def __iter__(self):
+        return (n for n in self._diff_list)
+
 
 class ScopeParser:
+    """TODO provide map-based declaration of marks"""
+
     @staticmethod
-    def pop_from_list(list_data: list):
-        ...
+    def parse_from_dict(dict_data: dict) -> list:
+        """
+        Parse and pop/mutates (when applicable) dynaconf marks from a dict and
+        return list of (mark_attr, new_value) tuples.
+        """
+        mark_list = []
+        merge = dict_data.pop("dynaconf_merge", None)
+        merge_unique = dict_data.pop("dynaconf_merge_unique", None)
+        if merge is not None:
+            mark_list.append(("merge", merge))
+        if merge_unique is not None:
+            mark_list.append(("merge_unique", merge_unique))
+
+        return mark_list
+
+    @staticmethod
+    def parse_from_list(list_data: list) -> list:
+        """
+        Parse and pop/mutates (when applicable) dynaconf marks from a list and
+        return list of (mark_attr, new_value) tuples.
+        """
+        mark_list = []
+        # reverse loop
+        for i in range(len(list_data) - 1, 0, -1):
+            if not isinstance(list_data[i], str):
+                continue
+
+            value = list_data[i].lower()
+            if value in ("dynaconf_merge",):
+                list_data.pop(i)
+                mark_list.append(("merge", True))
+            elif value in ("dynaconf_merge=false",):
+                list_data.pop(i)
+                mark_list.append(("merge", False))
+            elif value in ("dynaconf_merge_unique",):
+                list_data.pop(i)
+                mark_list.append(("merge_unique", True))
+            elif value.startswith("dynaconf_id_key="):
+                list_data.pop(i)
+                mark_list.append(("dict_id_key", value[value.find("=") + 1 :]))
+            elif value in ("@empty"):
+                list_data[i] = None
+        return mark_list
 
     @staticmethod
     def pop_from_dict(dict_data: dict):
@@ -218,43 +269,16 @@ class MergePolicy:
 
     merge: bool = True
     merge_unique: bool = True
-    dict_id_key_override: str | None = None
+    dict_id_key: str = "dynaconf_id"
 
-    # TODO extract this to a ScopeParser class
-    def pop_and_load_list_scope(self, list_data: list):
-        """Pop merge-marks from list and load into old object."""
-        i = len(list_data) - 1
-        while i >= 0:
+    def load_from_mark_list(self, mark_list: list[tuple]):
+        """
+        Load merge policies form mark list, where each list element is
+        a tuple (mark_attr, new_value)
+        """
+        for mark_attr, new_value in mark_list:
             try:
-                value = list_data[i].lower()
+                setattr(self, mark_attr, new_value)
             except AttributeError:
-                i -= 1
-                continue
-
-            decrement = 2
-            if value in ("dynaconf_merge",):
-                list_data.pop(i)
-                self.merge = True
-            elif value in ("dynaconf_merge=false",):
-                list_data.pop(i)
-                self.merge = False
-            elif value in ("dynaconf_merge_unique",):
-                list_data.pop(i)
-                self.merge_unique = True
-            elif value.startswith("@dict_id_key"):
-                list_data.pop(i)
-                self.dict_id_key_override = value[value.find("=") + 1 :]
-
-            elif value in ("@empty"):
-                list_data[i] = None
-            else:
-                decrement = 1
-            i -= decrement
-
-    def pop_and_load_dict_scope(self, dict_data: dict):
-        """Pop merge-marks from dict and load into old object."""
-        scope_merge = dict_data.get(
-            "dynaconf_merge",
-        )
-        if scope_merge:
-            self.merge = scope_merge
+                print("Invalid parsed marker")
+                raise

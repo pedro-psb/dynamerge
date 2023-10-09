@@ -3,16 +3,6 @@ Merge Algorithm
 """
 from __future__ import annotations
 
-import uuid
-from dataclasses import dataclass, field
-from pprint import pprint
-from typing import TypeAlias, NamedTuple, Literal
-from icecream import ic
-import enum
-
-
-# typing
-TreePath: TypeAlias = tuple
 
 
 # core
@@ -61,7 +51,6 @@ class MergeDispatcher:
     """
 
 
-
 def merge_dict(old, new, merge_policy: MergePolicy = None, tree_path: TreePath = None):
     ...
 
@@ -76,4 +65,3 @@ def keep_old(old, new, *args, **kwrgs):
 
 def keep_new(old, new, *args, **kwrgs):
     return new
-

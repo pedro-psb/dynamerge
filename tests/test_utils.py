@@ -1,22 +1,33 @@
-from main import MergePolicy
+from dynamerge.differ import MergePolicy, ScopeParser
 import pytest
 
 
 @pytest.mark.parametrize(
-    "mark,merge_policy_attr,initial_value, expected_value",
+    "mark,mark_attr,new_value",
     [
-        ("dynaconf_merge", "merge", False, True),
-        ("dynaconf_merge_unique", "merge_unique", False, True),
-        ("dynaconf_merge=false", "merge", True, False),
-        ("@dict_id_key=foo", "dict_id_key_override", "dynaconf_id", "foo"),
+        ("dynaconf_merge", "merge", True),
+        ("dynaconf_merge_unique", "merge_unique", True),
+        ("dynaconf_merge=false", "merge", False),
+        ("dynaconf_merge=False", "merge", False),
+        ("dynaconf_id_key=foo", "dict_id_key", "foo"),
     ],
 )
-def test_pop_and_load_list_scope(
-    mark, merge_policy_attr, initial_value, expected_value
-):
-    merge_policy = MergePolicy()
-    list_data = [1, 2, 3, mark]
-    setattr(merge_policy, merge_policy_attr, initial_value)
-    merge_policy.pop_and_load_list_scope(list_data)
-    assert getattr(merge_policy, merge_policy_attr) == expected_value
-    assert list_data == [1, 2, 3]
+def test_parse_from_list_single(mark, mark_attr, new_value):
+    sample_list = ["a", "b", 123, True, "dynaconf_abc", mark]
+    mark_list = ScopeParser.parse_from_list(sample_list)
+    assert len(mark_list) == 1
+    assert (mark_attr, new_value) in mark_list
+
+
+def test_parse_from_list_multiple():
+    sample_list = [
+        123,
+        "abc",
+        "dynaconf_merge",
+        "dynaconf_merge_unique",
+        "dynaconf_merge=false",
+        "dynaconf_id_key=foo",
+        "@empty",
+    ]
+    mark_list = ScopeParser.parse_from_list(sample_list)
+    assert len(mark_list) == 4

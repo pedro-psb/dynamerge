@@ -1,4 +1,4 @@
-from main import Differ, ShallowDiff
+from dynamerge.differ import KeyDiffer, KeyDiff
 from icecream import ic
 import pytest
 
@@ -20,23 +20,23 @@ cases = [
         [1, {"a": "A", "b": "B"}, 3],
         [1, {"a": "A", "b": "B"}, 3],
         [
-            ShallowDiff(0, (1, 1), (0, 0)),
-            ShallowDiff(1, ({"a": "A", "b": "B"}, {"a": "A", "b": "B"}), (1, 1)),
-            ShallowDiff(2, (3, 3), (2, 2)),
+            KeyDiff(0, (1, 1), (0, 0)),
+            KeyDiff(1, ({"a": "A", "b": "B"}, {"a": "A", "b": "B"}), (1, 1)),
+            KeyDiff(2, (3, 3), (2, 2)),
         ],
-        Differ.pseudo_id_strategies.use_index,
+        KeyDiffer.pseudo_id_strategies.use_index,
     ),
     param(
         "mode-unique--without-dict-id",
         [1, {"a": "A", "b": "B"}, 3],
         [1, {"a": "A", "b": "B"}, 3],
         [
-            ShallowDiff(0, (1, 1), (0, 0)),
-            ShallowDiff(1, ({"a": "A", "b": "B"}, Differ.EMPTY), (1, 1)),
-            ShallowDiff(1, ({"a": "A", "b": "B"}, Differ.EMPTY), (1, 1)),
-            ShallowDiff(2, (3, 3), (2, 2)),
+            KeyDiff(0, (1, 1), (0, 0)),
+            KeyDiff(1, ({"a": "A", "b": "B"}, None), (1, 1)),
+            KeyDiff(1, ({"a": "A", "b": "B"}, None), (1, 1)),
+            KeyDiff(2, (3, 3), (2, 2)),
         ],
-        Differ.pseudo_id_strategies.use_value_hash,
+        KeyDiffer.pseudo_id_strategies.use_value_hash,
     ),
 ]
 
@@ -46,7 +46,7 @@ cases = [
     cases,
 )
 def test_diff_list_basic(old, new, pseudo_id_strategy, expected):
-    diff_list = Differ.list_scope(
+    diff_list = KeyDiffer.list_scope(
         old,
         new,
         pseudo_id_strategy=pseudo_id_strategy,
