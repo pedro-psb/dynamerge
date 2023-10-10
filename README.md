@@ -20,8 +20,8 @@ Some possibilities:
 
 ## Roadmap
 
-- [/] list key differ
-- [/] dict key differ
+- [x] list key differ
+- [x] dict key differ
 - [ ] diff-action mapper
 - [ ] final user-configuration interfaces
 - [ ] refactor
@@ -46,7 +46,7 @@ $ dynamerge-diff-cases
 * Map of **path:strategy**
 * Map of **depth:strategy**
 * List identity modes:
-  use_index - use index as item id
-  use_value_hash - use hash values as item id and pseudo-id for non-hashable
-  always_disjoint - consider (old,new) disjoint sets
+- use_index - use index as item id
+- use_value_hash - use hash values as item id and pseudo-id for non-hashable
+- always_disjoint - consider (old,new) disjoint sets
 

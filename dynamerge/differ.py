@@ -80,8 +80,6 @@ class KeyDiffer:
     ) -> list[KeyDiff]:
         """Return a KeyDiff lists (old,new)."""
         merge_policy = merge_policy or MergePolicy()
-        mark_list = ScopeParser.parse_from_dict(new)
-        merge_policy.load_from_mark_list(mark_list)
         diffs = DiffList()
 
         union_keys = old.keys() | new.keys()
@@ -212,6 +210,20 @@ class ScopeParser:
     """TODO provide map-based declaration of marks"""
 
     @staticmethod
+    def parse_diff(diff: KeyDiff):
+        """
+        Parse dynaconf_marks from within KeyDiff.diff_pair containers (mutates).
+        Return list of (mark_attr, new_value) tuples.
+        """
+        mark_list = []
+        for container in diff.diff_pair:
+            if isinstance(container, dict):
+                mark_list += ScopeParser.parse_from_dict(container)
+            elif isinstance(container, list):
+                mark_list += ScopeParser.parse_from_list(container)
+        return mark_list
+
+    @staticmethod
     def parse_from_dict(dict_data: dict) -> list:
         """
         Parse and pop/mutates (when applicable) dynaconf marks from a dict and
@@ -270,6 +282,12 @@ class MergePolicy:
     merge: bool = True
     merge_unique: bool = True
     dict_id_key: str = "dynaconf_id"
+
+    def inherit_load(self, parent_merge_policy: MergePolicy) -> MergePolicy:
+        self.merge = parent_merge_policy.merge
+        self.merge_unique = parent_merge_policy.merge_unique
+        self.dict_id_key = parent_merge_policy.dict_id_key
+        return self
 
     def load_from_mark_list(self, mark_list: list[tuple]):
         """

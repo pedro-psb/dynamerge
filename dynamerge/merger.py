@@ -2,7 +2,7 @@
 Module responsible for merging two structures.
 """
 from __future__ import annotations
-from dynamerge.differ import MergePolicy, KeyDiffer, KeyDiff
+from dynamerge.differ import MergePolicy, KeyDiffer, KeyDiff, ScopeParser
 from typing import Any, TypeAlias
 from icecream import ic
 
@@ -84,11 +84,20 @@ class Merger:
         tree_path: TreePath = None,
     ):
         merge_policy = merge_policy or MergePolicy()
+        # mark_list = ScopeParser.parse_from_dict(new)
+        # merge_policy.load_from_mark_list(mark_list)
+
         diff_list = KeyDiffer.diff_dict(old, new, merge_policy)
         parent = old  # old will be mutated in-place. e.g parent[ḱey] = new_value
         for diff in diff_list:
+            # new independent merge policy for each child, bacause each has a different
+            # scope and their policy should not be mixed
+            child_merge_policy = MergePolicy().inherit_load(merge_policy)
+            diff_marks = ScopeParser.parse_diff(diff)
+            child_merge_policy.load_from_mark_list(diff_marks)
+
             action_fn = Merger.get_action(parent, diff)
-            action_fn(parent, diff, merge_policy=merge_policy)
+            action_fn(parent, diff, merge_policy=child_merge_policy)
         return parent
 
 
