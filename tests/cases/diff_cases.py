@@ -61,10 +61,38 @@ Examples
 
 """
 from __future__ import annotations
-from dynamerge.differ import KeyDiffer
+from dynamerge.differ import KeyDiffer, KeyDiff, DiffList
 from icecream import ic
+from typing import NamedTuple, Callable
+from functools import partial
 
 doc = __doc__
+
+
+class DiffCase(NamedTuple):
+    name: str
+    fn: Callable
+    pseudo_id: Callable
+    old: dict | list
+    new: dict | list
+    exp: list[KeyDiff]
+
+
+diff_cases = [
+    DiffCase(
+        "list mode: positional",
+        KeyDiffer.diff_list,
+        KeyDiffer.pseudo_id_strategies.use_index,
+        [1, 2, 3, 4],
+        [4, 3, 2, 1],
+        DiffList(
+            KeyDiff(0, (1, 4), (0, 0)),
+            KeyDiff(1, (2, 3), (1, 1)),
+            KeyDiff(2, (3, 2), (2, 2)),
+            KeyDiff(3, (4, 1), (3, 3)),
+        ),
+    )
+]
 
 
 def main():
@@ -165,6 +193,7 @@ def case_list_diff_use_value_hash_cases():
         pseudo_id_strategy=KeyDiffer.pseudo_id_strategies.use_value_hash,
     )
 
+
 def case_dict_diff():
     diff_report(
         "dict merge",
@@ -186,10 +215,11 @@ def case_dict_diff():
     )
     diff_report(
         "dict merge",
-        {"a": [1,2,3,4], "b": "B"},
+        {"a": [1, 2, 3, 4], "b": "B"},
         {"a": {"m": "M", "n": "N", "p": "P"}, "b": "Not B"},
         KeyDiffer.diff_dict,
     )
+
 
 if __name__ == "__main__":
     exit(main())
