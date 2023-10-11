@@ -80,7 +80,7 @@ class KeyDiffer:
     ) -> list[KeyDiff]:
         """Return a KeyDiff lists (old,new)."""
         merge_policy = merge_policy or MergePolicy()
-        diffs = DiffList()
+        diffs = []
 
         union_keys = old.keys() | new.keys()
         for id_key in union_keys:
@@ -102,7 +102,7 @@ class KeyDiffer:
         pseudo_id_mapper = pseudo_id_strategy or PseudoIdStrategies.use_index
         merge_policy = merge_policy or MergePolicy()
         merge_policy.load_from_mark_list(ScopeParser.parse_from_list(new))
-        diffs = DiffList()
+        diffs = []
 
         # maps {old.pseudo_id -> old.index},
         # - pseudo_id is a generated id from the list-item (for identify comparision)
@@ -166,9 +166,9 @@ class KeyDiff(NamedTuple):
     real_key_pair: tuple
 
 
-@dataclass
-class DiffList:
-    _diff_list: list = field(default_factory=list)
+class DiffUtils:
+    def __init__(self, *key_diff: KeyDiff):
+        self._diff_list: list = list(key_diff) if key_diff else []
 
     def append(self, diff: KeyDiff):
         self._diff_list.append(diff)
@@ -197,10 +197,14 @@ class DiffList:
             )
         return self._diff_list
 
-    def sort(self, by_attr: str = "id_key", by_attr_secondary: str = None):
+    @staticmethod
+    def sort_diff_list(
+        diff_list: list[KeyDiff], by_attr: str = "id_key", by_attr_secondary: str = None
+    ):
         """Sort this diff_list in-place by key"""
-        self._diff_list.sort(key=lambda item: str(getattr(item, by_attr)))
-        return self
+        _diff_list = diff_list.copy()
+        _diff_list.sort(key=lambda item: str(getattr(item, by_attr)))
+        return _diff_list
 
     def __iter__(self):
         return (n for n in self._diff_list)
