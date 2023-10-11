@@ -35,9 +35,11 @@ Some possibilities:
 
 ## Preview
 
+The test are organized in Case classes (under `tests/cases`), which condensate basic setup, input and output data for testing and documentation.
+
 ```python
 $ pip install -e .
-$ dynamerge-diff-cases
+$ pytest -sv --no-summary # overview
 ```
 
 ## Configurables assets
