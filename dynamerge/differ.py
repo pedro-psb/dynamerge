@@ -101,7 +101,6 @@ class KeyDiffer:
         """Return a KeyDiff lists (old,new)."""
         pseudo_id_mapper = pseudo_id_strategy or PseudoIdStrategies.use_index
         merge_policy = merge_policy or MergePolicy()
-        merge_policy.load_from_mark_list(ScopeParser.parse_from_list(new))
         diffs = []
 
         # maps {old.pseudo_id -> old.index},
@@ -115,7 +114,6 @@ class KeyDiffer:
         )
 
         union_keys = old_pseudo_id_map.keys() | new_pseudo_id_map.keys()
-
         for id_key in union_keys:
             # get index from pseudo_id
             old_index_key = old_pseudo_id_map.get(id_key, None)
@@ -214,17 +212,16 @@ class ScopeParser:
     """TODO provide map-based declaration of marks"""
 
     @staticmethod
-    def parse_diff(diff: KeyDiff):
+    def parse_container(container: dict | list):
         """
-        Parse dynaconf_marks from within KeyDiff.diff_pair containers (mutates).
+        Parse dynaconf_marks from within container (dict or list).
         Return list of (mark_attr, new_value) tuples.
         """
         mark_list = []
-        for container in diff.diff_pair:
-            if isinstance(container, dict):
-                mark_list += ScopeParser.parse_from_dict(container)
-            elif isinstance(container, list):
-                mark_list += ScopeParser.parse_from_list(container)
+        if isinstance(container, dict):
+            mark_list += ScopeParser.parse_from_dict(container)
+        elif isinstance(container, list):
+            mark_list += ScopeParser.parse_from_list(container)
         return mark_list
 
     @staticmethod
@@ -280,7 +277,12 @@ class ScopeParser:
 @dataclass
 class MergePolicy:
     """
-    Responsible for managing global, scope and key-specific policies
+    Responsible for storing merge policies and directives, which control the
+    behavior of merging process in various scopes.
+
+    This object is intended to be "inherited" via duplication for each tree-level
+    of the merging process, thus representing what policies should apply for a
+    particular level.
     """
 
     merge: bool = True

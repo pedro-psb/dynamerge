@@ -52,29 +52,51 @@ def get_structural_type(value):
 class Merger:
     # (parent-type, old-type, new-type): action-over-parent
     action_map = {
-        # specific maps
-        (dict, dict, dict): use_dict_merge,
-        (dict, dict, Terminal): use_new,
-        (dict, Terminal, dict): use_new,
-        (dict, Terminal, Terminal): use_new,
-        # generic maps (TODO implement Any structural type)
-        (dict, None, Terminal): use_new,
-        (dict, None, dict): use_new,
-        (dict, None, list): use_new,
-        (dict, Terminal, None): use_old,
-        (dict, list, None): use_old,
-        (dict, dict, None): use_old,
+        ("default",): {
+            (dict, dict, dict): use_dict_merge,
+            (dict, dict, Terminal): use_new,
+            (dict, Terminal, dict): use_new,
+            (dict, Terminal, Terminal): use_new,
+            (dict, None, Terminal): use_new,
+            (dict, None, dict): use_new,
+            (dict, None, list): use_new,
+            (dict, Terminal, None): use_old,
+            (dict, list, None): use_old,
+            (dict, dict, None): use_old,
+        },
+        ("root",): {
+            (dict, dict, dict): use_dict_merge,
+            (dict, dict, Terminal): use_new,
+            (dict, Terminal, dict): use_new,
+            (dict, Terminal, Terminal): use_new,
+            (dict, None, Terminal): use_new,
+            (dict, None, dict): use_new,
+            (dict, None, list): use_new,
+            (dict, Terminal, None): use_old,
+            (dict, list, None): use_old,
+            (dict, dict, None): use_old,
+        },
     }
 
     @staticmethod
-    def get_action(parent, diff: KeyDiff):
+    def get_action(parent, diff: KeyDiff, tree_path: tuple[str] = None):
+        """
+        Action that will use to process old/new-values in relation to parent conainer.
+        """
         parent_type = type(parent)
         old_value, new_value = diff.diff_pair
 
         old_type = get_structural_type(old_value)
         new_type = get_structural_type(new_value)
 
-        return Merger.action_map[(parent_type, old_type, new_type)]
+        try:
+            action_map = Merger.action_map[tree_path][(parent_type, old_type, new_type)]
+        except KeyError:
+            action_map = Merger.action_map[("default",)][
+                (parent_type, old_type, new_type)
+            ]
+
+        return action_map
 
     @staticmethod
     def merge_dict(
@@ -84,6 +106,7 @@ class Merger:
         tree_path: TreePath = None,
     ):
         merge_policy = merge_policy or MergePolicy()
+        tree_path = tree_path or ("root",)
         # mark_list = ScopeParser.parse_from_dict(new)
         # merge_policy.load_from_mark_list(mark_list)
 
@@ -93,10 +116,12 @@ class Merger:
             # new independent merge policy for each child, bacause each has a different
             # scope and their policy should not be mixed
             child_merge_policy = MergePolicy().inherit_load(merge_policy)
-            diff_marks = ScopeParser.parse_diff(diff)
+
+            # parse new-value only. Old should never contain markers
+            diff_marks = ScopeParser.parse_container(diff.diff_pair[1])
             child_merge_policy.load_from_mark_list(diff_marks)
 
-            action_fn = Merger.get_action(parent, diff)
+            action_fn = Merger.get_action(parent, diff, tree_path)
             action_fn(parent, diff, merge_policy=child_merge_policy)
         return parent
 

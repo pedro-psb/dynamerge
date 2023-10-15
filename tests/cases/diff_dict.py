@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 
-from dynamerge.differ import KeyDiffer, KeyDiff
+from dynamerge.differ import KeyDiffer, KeyDiff, MergePolicy
 
 
 doc = __doc__
@@ -18,6 +18,7 @@ class DiffCase:
     old: dict | list
     new: dict | list
     exp: list[KeyDiff]
+    merge_policy: MergePolicy = None
 
 
 case_list = [

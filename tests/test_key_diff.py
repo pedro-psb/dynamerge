@@ -27,13 +27,13 @@ def param_cases(cases):
 
 @pytest.mark.parametrize("case", param_cases(diff_list.case_list))
 def test_diff_lists(case: diff_list.DiffCase):
-    merge_policy = MergePolicy()
+    merge_policy = case.merge_policy or MergePolicy()
     diffs = KeyDiffer.diff_list(case.old, case.new, merge_policy, case.pseudo_id)
     assert DiffUtils.sort_diff_list(diffs) == DiffUtils.sort_diff_list(case.exp)
 
 
 @pytest.mark.parametrize("case", param_cases(diff_dict.case_list))
 def test_diff_dict(case: diff_dict.DiffCase):
-    merge_policy = MergePolicy()
+    merge_policy = case.merge_policy or MergePolicy()
     diffs = KeyDiffer.diff_dict(case.old, case.new, merge_policy)
     assert DiffUtils.sort_diff_list(diffs) == DiffUtils.sort_diff_list(case.exp)
