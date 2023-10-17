@@ -4,11 +4,10 @@ that helps setup complex scenarios for simple in==out assertions.
 
 Check the specific case parameters to understand it's the variables in play.
 """
-from dynamerge.differ import KeyDiffer, MergePolicy
+from dynamerge.differ import MergePolicy
 from dynamerge.merger import Merger
 import pytest
-from .cases import merge_cases
-from icecream import ic
+from .cases import merge_dict, merge_list
 
 
 @pytest.fixture(autouse=True)
@@ -26,8 +25,16 @@ def param_cases(cases):
     return param_cases
 
 
-@pytest.mark.parametrize("case", param_cases(merge_cases.case_list))
-def test_merge_dicts(case: merge_cases.MergeCase):
+@pytest.mark.parametrize("case", param_cases(merge_dict.cases))
+def test_merge_dicts(case: merge_dict.MergeCase):
+    merge_policy = MergePolicy()
+    # breakpoint()
+    Merger.merge_dict(case.old, case.new, merge_policy)
+    assert case.old == case.expected
+
+
+@pytest.mark.parametrize("case", param_cases(merge_list.cases))
+def test_merge_lists(case: merge_list.MergeCase):
     merge_policy = MergePolicy()
     Merger.merge_dict(case.old, case.new, merge_policy)
     assert case.old == case.expected

@@ -73,6 +73,21 @@ class KeyDiffer:
     pseudo_id_strategies = PseudoIdStrategies
 
     @staticmethod
+    def diff_container(
+        old: dict,
+        new: dict,
+        merge_policy: MergePolicy = None,
+        **kwargs,
+    ) -> list[KeyDiff]:
+        """Return a KeyDiff lists (old,new) from lists or dicts."""
+        if isinstance(old, dict) and isinstance(new, dict):
+            return KeyDiffer.diff_dict(old, new, merge_policy, **kwargs)
+        elif isinstance(old, list) and isinstance(new, list):
+            return KeyDiffer.diff_list(old, new, merge_policy, **kwargs)
+        else:
+            raise TypeError("Can merge only dicts or lists togheter")
+
+    @staticmethod
     def diff_dict(
         old: dict,
         new: dict,

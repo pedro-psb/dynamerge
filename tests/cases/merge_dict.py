@@ -10,26 +10,32 @@ class MergeCase:
     expected: dict | list
 
 
-case_list = [
+cases = [
     MergeCase(
-        "un-nested dicts",
+        "un-nested dicts on root should merge",
         {"root": {"a": "A", "b": "B"}},
         {"root": {"a": "A*", "c": "C"}},
         {"root": {"a": "A*", "b": "B", "c": "C"}},
     ),
     MergeCase(
-        "nested dicts: new-old overrides common keys",
-        {"root": {"a": "A", "b": {"c": "C", "d": "D"}}},
+        "nested dicts outside root shouldnt merge",
+        {"root": {"nested": {"a": "A", "b": "B"}}},
+        {"root": {"nested": {"c": "C"}}},
+        {"root": {"nested": {"c": "C"}}},
+    ),
+    MergeCase(
+        "mixed nested and unested dicts should behave consistently",
+        {"root": {"a": "A", "b": {"c": "C", "d": "D"}}, "foo": True},
         {"root": {"a": "A*", "b": {"c": "C*", "e": "E"}}},
-        {"root": {"a": "A*", "b": {"c": "C*", "d": "D", "e": "E"}}},
+        {"root": {"a": "A*", "b": {"c": "C*", "e": "E"}}, "foo": True},
     ),
     # fmt: off
     MergeCase(
-        "nested dicts: new-only merges different key",
+        "dynaconf_merge=true should apply for subsequent nesting levels",
         {"root":
             {"a": "A", "b": {"c": "C", "d": {"e": "E", "f": {"g": "G", "h": "H"}}}}},
         {"root":
-            {"b": {"d": {"f": {"g": "G*"}}}}},
+            {"b": {"d": {"f": {"g": "G*"}}}, "dynaconf_merge": True}},
         {"root":
             {"a": "A", "b": {"c": "C", "d": {"e": "E", "f": {"g": "G*", "h": "H"}}}}},
     ),
