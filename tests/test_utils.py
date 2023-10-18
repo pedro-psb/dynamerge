@@ -1,4 +1,4 @@
-from dynamerge.differ import MergePolicy, ScopeParser
+from dynamerge.marks import ScopeParser
 import pytest
 
 

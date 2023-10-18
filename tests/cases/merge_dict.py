@@ -32,12 +32,17 @@ cases = [
     # fmt: off
     MergeCase(
         "dynaconf_merge=true should apply for subsequent nesting levels",
-        {"root":
-            {"a": "A", "b": {"c": "C", "d": {"e": "E", "f": {"g": "G", "h": "H"}}}}},
-        {"root":
-            {"b": {"d": {"f": {"g": "G*"}}}, "dynaconf_merge": True}},
-        {"root":
-            {"a": "A", "b": {"c": "C", "d": {"e": "E", "f": {"g": "G*", "h": "H"}}}}},
+        {"root": {
+            "a": "A",
+            "b": {"c": "C", "d": {"e": "E", "f": "F"}}}},
+        {"root": {
+            "b": {"d": {"f": "F*"}}, "dynaconf_merge": True}},
+        {
+            "root": {
+                "a": "A",
+                "b": {"c": "C", "d": {"e": "E", "f": "F*"}},
+            }
+        },
     ),
     # fmt: on
     MergeCase(

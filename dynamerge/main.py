@@ -1,14 +1,9 @@
-"""
-Merge Algorithm
-"""
 from __future__ import annotations
 
 
-
-# core
-
-
 class actions:
+    """Just an idea. Not being used"""
+
     def Append():
         """Append to last position"""
 
@@ -26,6 +21,7 @@ class actions:
 
 
 # what to do with conflict inside specific types
+# NOT BEING USED
 global_conflict_policy_profiles = {
     "dict": {
         "terminal": actions.KeepThis(),
@@ -43,25 +39,3 @@ global_conflict_policy_profiles = {
         "list": actions.KeepThis(),
     },
 }
-
-
-class MergeDispatcher:
-    """
-    Responsible for choosing which merge_fn to use according to some context.
-    """
-
-
-def merge_dict(old, new, merge_policy: MergePolicy = None, tree_path: TreePath = None):
-    ...
-
-
-def merge_terminal(old, new, merge_policy: MergePolicy, tree_path: TreePath):
-    ...
-
-
-def keep_old(old, new, *args, **kwrgs):
-    return old
-
-
-def keep_new(old, new, *args, **kwrgs):
-    return new

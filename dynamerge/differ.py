@@ -6,8 +6,8 @@ container, such as dicts and lists.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import NamedTuple, Literal, TypeAlias
+from dataclasses import dataclass
+from typing import NamedTuple, Literal
 
 
 class PseudoIdStrategies:
@@ -58,9 +58,6 @@ class PseudoIdStrategies:
         return return_dict
 
 
-from icecream import ic
-
-
 class KeyDiffer:
     """
     Provide function to diff containers by key only (no value compare).
@@ -79,7 +76,7 @@ class KeyDiffer:
         merge_policy: MergePolicy = None,
         **kwargs,
     ) -> list[KeyDiff]:
-        """Return a KeyDiff lists (old,new) from lists or dicts."""
+        """Return a KeyDiff lists from containers (lists or dicts types)."""
         if isinstance(old, dict) and isinstance(new, dict):
             return KeyDiffer.diff_dict(old, new, merge_policy, **kwargs)
         elif isinstance(old, list) and isinstance(new, list):
@@ -223,72 +220,6 @@ class DiffUtils:
         return (n for n in self._diff_list)
 
 
-class ScopeParser:
-    """TODO provide map-based declaration of marks"""
-
-    @staticmethod
-    def parse_container(container: dict | list):
-        """
-        Parse dynaconf_marks from within container (dict or list).
-        Return list of (mark_attr, new_value) tuples.
-        """
-        mark_list = []
-        if isinstance(container, dict):
-            mark_list += ScopeParser.parse_from_dict(container)
-        elif isinstance(container, list):
-            mark_list += ScopeParser.parse_from_list(container)
-        return mark_list
-
-    @staticmethod
-    def parse_from_dict(dict_data: dict) -> list:
-        """
-        Parse and pop/mutates (when applicable) dynaconf marks from a dict and
-        return list of (mark_attr, new_value) tuples.
-        """
-        mark_list = []
-        merge = dict_data.pop("dynaconf_merge", None)
-        merge_unique = dict_data.pop("dynaconf_merge_unique", None)
-        if merge is not None:
-            mark_list.append(("merge", merge))
-        if merge_unique is not None:
-            mark_list.append(("merge_unique", merge_unique))
-
-        return mark_list
-
-    @staticmethod
-    def parse_from_list(list_data: list) -> list:
-        """
-        Parse and pop/mutates (when applicable) dynaconf marks from a list and
-        return list of (mark_attr, new_value) tuples.
-        """
-        mark_list = []
-        # reverse loop
-        for i in range(len(list_data) - 1, 0, -1):
-            if not isinstance(list_data[i], str):
-                continue
-
-            value = list_data[i].lower()
-            if value in ("dynaconf_merge",):
-                list_data.pop(i)
-                mark_list.append(("merge", True))
-            elif value in ("dynaconf_merge=false",):
-                list_data.pop(i)
-                mark_list.append(("merge", False))
-            elif value in ("dynaconf_merge_unique",):
-                list_data.pop(i)
-                mark_list.append(("merge_unique", True))
-            elif value.startswith("dynaconf_id_key="):
-                list_data.pop(i)
-                mark_list.append(("dict_id_key", value[value.find("=") + 1 :]))
-            elif value in ("@empty"):
-                list_data[i] = None
-        return mark_list
-
-    @staticmethod
-    def pop_from_dict(dict_data: dict):
-        ...
-
-
 @dataclass
 class MergePolicy:
     """
@@ -300,14 +231,21 @@ class MergePolicy:
     particular level.
     """
 
-    merge: bool = True
-    merge_unique: bool = True
+    merge: bool = False
+    merge_unique: bool = False
     dict_id_key: str = "dynaconf_id"
 
     def inherit_load(self, parent_merge_policy: MergePolicy) -> MergePolicy:
-        self.merge = parent_merge_policy.merge
-        self.merge_unique = parent_merge_policy.merge_unique
-        self.dict_id_key = parent_merge_policy.dict_id_key
+        """
+        Copy parent MergePolicy to self.
+        Bypasses None values to allow partial override.
+        """
+        if parent_merge_policy.merge is not None:
+            self.merge = parent_merge_policy.merge
+        if parent_merge_policy.merge_unique is not None:
+            self.merge_unique = parent_merge_policy.merge_unique
+        if parent_merge_policy.dict_id_key is not None:
+            self.dict_id_key = parent_merge_policy.dict_id_key
         return self
 
     def load_from_mark_list(self, mark_list: list[tuple]):
