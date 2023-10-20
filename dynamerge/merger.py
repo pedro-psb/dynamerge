@@ -199,5 +199,15 @@ class Merger:
         return parent
 
 
+@dataclass
+class MergeResult:
+    tree_patch: TreePatch
+    merge_operation_count: int = 0
+
+
+class TreePatch:
+    """A Tree representation of the patches of a merge"""
+
+
 if __name__ == "__main__":
     exit(main())

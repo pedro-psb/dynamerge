@@ -1,41 +1,33 @@
 from __future__ import annotations
+from dynamerge.merger import Merger, MergePolicy
 
 
-class actions:
-    """Just an idea. Not being used"""
+class BaseTree:
+    """
+    A long living object that store relevant state about the main internal storage,
+    that is, the base_dict containing all the settings.
+    """
 
-    def Append():
-        """Append to last position"""
+    def __init__(self):
+        self.base_dict = {}
+        self.lazy_tree = LazyTree()
+        self.default_tree = DefaultTree()
+        self.merger = Merger
+        self.base_merge_policy = MergePolicy()
 
-    def Insert(index: int = 0):
-        """Inset at position @index. Shifts list"""
-
-    def KeepThis():
-        """Keep old side"""
-
-    def KeepOther():
-        """Keep new side"""
-
-    def Merge(levels: int = -1):
-        """-1 for recursive"""
+    def merge(self, other: dict):
+        merge_result = self.merger.merge_containers(self, other)
 
 
-# what to do with conflict inside specific types
-# NOT BEING USED
-global_conflict_policy_profiles = {
-    "dict": {
-        "terminal": actions.KeepThis(),
-        "dict": actions.Merge(-1),
-        "list": True,
-    },
-    "sequence": {
-        "terminal": actions.Append(),
-        "dict": actions.Append(),
-        "list": actions.Append(),
-    },
-    "set": {
-        "terminal": actions.KeepThis(),
-        "dict": actions.KeepThis(),
-        "list": actions.KeepThis(),
-    },
-}
+class LazyTree:
+    """
+    A tree to store (path:lazy-object) data, so it can be re-evaluated
+    without recursing the whole three.
+    """
+
+
+class DefaultTree:
+    """
+    A tree to store (path:default-value) data, so it can be returned as default
+    in case the path don't exist in the base_dict.
+    """
