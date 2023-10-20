@@ -29,12 +29,12 @@ def param_cases(cases):
 def test_merge_dicts(case: merge_dict.MergeCase):
     merge_policy = MergePolicy()
     # breakpoint()
-    Merger.merge_containers(case.old, case.new, merge_policy)
+    Merger().merge_containers(case.old, case.new, merge_policy)
     assert case.old == case.expected
 
 
 @pytest.mark.parametrize("case", param_cases(merge_list.cases))
 def test_merge_lists(case: merge_list.MergeCase):
     merge_policy = MergePolicy()
-    Merger.merge_containers(case.old, case.new, merge_policy)
+    Merger().merge_containers(case.old, case.new, merge_policy)
     assert case.old == case.expected

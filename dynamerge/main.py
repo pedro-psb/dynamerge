@@ -1,5 +1,6 @@
 from __future__ import annotations
-from dynamerge.merger import Merger, MergePolicy
+
+from dynamerge.merger import Merger, MergePolicy, TreePatch
 
 
 class BaseTree:
@@ -14,9 +15,23 @@ class BaseTree:
         self.default_tree = DefaultTree()
         self.merger = Merger
         self.base_merge_policy = MergePolicy()
+        self.stats = {"merge_operations_count"}
 
     def merge(self, other: dict):
-        merge_result = self.merger.merge_containers(self, other)
+        self.merger.merge_containers(self, other)
+        merge_result = self.merger.result
+
+        self.stats["merge_operation_count"] += merge_result.merge_operation_count
+        self.lazy_tree.update_with_patch(merge_result.tree_patch)
+
+    def get(self, key):
+        """
+        Get value internally, optionally triggering re-evaluation, pre and pos hooks,
+        and fallback to defaults (kind of a hook).
+        """
+
+    def set(self, key, value):
+        """Shortcut for setting a single key. Trigger a simpe merge."""
 
 
 class LazyTree:
@@ -24,6 +39,12 @@ class LazyTree:
     A tree to store (path:lazy-object) data, so it can be re-evaluated
     without recursing the whole three.
     """
+
+    def update_with_patch(self, patch: TreePatch):
+        """
+        Updates self according to operations related to Lazy values, such
+        as updating, deleting or adding a LazyValue.
+        """
 
 
 class DefaultTree:

@@ -5,6 +5,7 @@ Responsible for creating diff objects from
 container, such as dicts and lists.
 """
 from __future__ import annotations
+from icecream import ic
 
 from dataclasses import dataclass
 from typing import NamedTuple, Literal
@@ -82,7 +83,7 @@ class KeyDiffer:
         elif isinstance(old, list) and isinstance(new, list):
             return KeyDiffer.diff_list(old, new, merge_policy, **kwargs)
         else:
-            raise TypeError("Can merge only dicts or lists togheter")
+            raise TypeError("Can diff only dicts or lists togheter")
 
     @staticmethod
     def diff_dict(
