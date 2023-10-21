@@ -5,10 +5,9 @@ Responsible for creating diff objects from
 container, such as dicts and lists.
 """
 from __future__ import annotations
-from icecream import ic
 
-from dataclasses import dataclass
 from typing import NamedTuple, Literal
+from dynamerge.merge_policy import MergePolicy
 
 
 class PseudoIdStrategies:
@@ -219,44 +218,3 @@ class DiffUtils:
 
     def __iter__(self):
         return (n for n in self._diff_list)
-
-
-@dataclass
-class MergePolicy:
-    """
-    Responsible for storing merge policies and directives, which control the
-    behavior of merging process in various scopes.
-
-    This object is intended to be "inherited" via duplication for each tree-level
-    of the merging process, thus representing what policies should apply for a
-    particular level.
-    """
-
-    merge: bool = False
-    merge_unique: bool = False
-    dict_id_key: str = "dynaconf_id"
-
-    def inherit_load(self, parent_merge_policy: MergePolicy) -> MergePolicy:
-        """
-        Copy parent MergePolicy to self.
-        Bypasses None values to allow partial override.
-        """
-        if parent_merge_policy.merge is not None:
-            self.merge = parent_merge_policy.merge
-        if parent_merge_policy.merge_unique is not None:
-            self.merge_unique = parent_merge_policy.merge_unique
-        if parent_merge_policy.dict_id_key is not None:
-            self.dict_id_key = parent_merge_policy.dict_id_key
-        return self
-
-    def load_from_mark_list(self, mark_list: list[tuple]):
-        """
-        Load merge policies form mark list, where each list element is
-        a tuple (mark_attr, new_value)
-        """
-        for mark_attr, new_value in mark_list:
-            try:
-                setattr(self, mark_attr, new_value)
-            except AttributeError:
-                print("Invalid parsed marker")
-                raise

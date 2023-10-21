@@ -2,7 +2,8 @@
 Module responsible for merging two structures.
 """
 from __future__ import annotations
-from dynamerge.differ import MergePolicy, KeyDiffer, KeyDiff
+from dynamerge.differ import KeyDiffer, KeyDiff
+from dynamerge.merge_policy import MergePolicy
 from dynamerge.marks import ScopeParser
 from typing import Any, TypeAlias, Callable
 from icecream import ic

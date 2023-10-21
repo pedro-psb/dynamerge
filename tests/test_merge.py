@@ -4,7 +4,7 @@ that helps setup complex scenarios for simple in==out assertions.
 
 Check the specific case parameters to understand it's the variables in play.
 """
-from dynamerge.differ import MergePolicy
+from dynamerge.merge_policy import MergePolicy
 from dynamerge.merger import Merger
 import pytest
 from .cases import merge_dict, merge_list

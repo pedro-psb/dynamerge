@@ -1,3 +1,60 @@
+from __future__ import annotations
+from typing import Any
+from dynamerge.merge_policy import MergePolicy, MergePolicyNode
+import dataclasses
+
+
+class MarkupParser:
+    def __init__(self, base_dict: dict):
+        self._base_dict = base_dict
+        self.merge_policy_tree: MergePolicyNode = None
+        self.lazy_value_map: LazyMap = None
+        self.lazy_value_graph: LazyGraph = None
+
+    def parse_tree(self):
+        """Parse a dict-tree structure and return result with relevant data"""
+        self._recursive_parse(self._base_dict)
+        return ParseResult(
+            self.merge_policy_tree, self.lazy_value_map, self.lazy_value_graph
+        )
+
+    def _recursive_parse(self, obj: dict | list | Any):
+        if isinstance(obj, dict):
+            ...
+        elif isinstance(obj, list):
+            ...
+        else:
+            ...
+
+
+@dataclasses.dataclass
+class ParseResult:
+    merge_policy_tree: Any
+    lazy_value_map: LazyMap
+    lazy_value_graph: LazyGraph
+
+
+class LazyMap:
+    """
+    Represents key-value pair (path, LazyValue).
+    """
+
+
+class LazyGraph:
+    """
+    given paths a,b,c and dependencies:
+    a <- b
+    b <- c
+
+    lazy_graph is:
+    {
+        a: [b],
+        b: [c],
+        c: []
+    }
+    """
+
+
 class ScopeParser:
     """TODO provide map-based declaration of marks"""
 
