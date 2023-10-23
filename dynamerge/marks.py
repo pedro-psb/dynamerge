@@ -111,7 +111,7 @@ class ScopeParser:
                 mark_list.append(("merge_unique", True))
             elif value.startswith("dynaconf_id_key="):
                 list_data.pop(i)
-                mark_list.append(("dict_id_key", value[value.find("=") + 1 :]))
+                mark_list.append(("dict_id_key", value[value.find("=") + 1:]))
             elif value in ("@empty"):
                 list_data[i] = None
         return mark_list
@@ -119,3 +119,42 @@ class ScopeParser:
     @staticmethod
     def pop_from_dict(dict_data: dict):
         ...
+
+
+class TokenParser:
+    @staticmethod
+    def parse(string: str) -> list[tuple[str, str]]:
+        """
+        Parse tokens in form Token + Optional[argument]:
+            @token_a [args_a] [@token_b [args_b]] ...
+
+        Example:
+            >>> TokenParser.parses("@foo @bar spam")
+            (('foo', ''), ('bar', 'spam')
+        """
+        token_word = []
+        token_arg = []
+        token_list = []
+        capture_mode = "token_word"
+        for i, char in enumerate(string[1:]):
+            if capture_mode == "token_word":
+                if char == " ":
+                    capture_mode = "token_arg"
+                    continue
+                else:
+                    token_word.append(char)
+            elif capture_mode == "token_arg":
+                if char == "@":
+                    capture_mode = "token_word"
+                    token_list.append(
+                        ("".join(token_word), "".join(token_arg[:-1])))
+                    token_word.clear()
+                    token_arg.clear()
+                else:
+                    token_arg.append(char)
+        token_list.append(
+            ("".join(token_word), "".join(token_arg)))
+        token_word.clear()
+        token_arg.clear()
+        token_list = token_list
+        return token_list

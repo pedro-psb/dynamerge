@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -50,7 +50,7 @@ class MergePolicyNode:
 
     key: str
     merge_policy: MergePolicy
-    children: list = dataclasses.field(default_factory=list)
+    children: list = field(default_factory=list)
 
     def add_child(self, child: MergePolicyNode):
         if not isinstance(child, MergePolicyNode):
