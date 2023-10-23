@@ -43,6 +43,19 @@ class MergePolicy:
                 print("Invalid parsed marker")
                 raise
 
+    def load_from_path_map(self, path):
+        """
+        Load merge policy from a map of path:merge_policy
+        """
+        map = {
+            ("root",): MergePolicy(merge=False),
+        }
+        try:
+            self.inherit_load(map[path])
+        except KeyError:
+            ...
+        return self
+
 
 @dataclass
 class MergePolicyNode:
@@ -59,4 +72,7 @@ class MergePolicyNode:
         self.children.append(child)
 
     def __getitem__(self, key):
-        return self.children[key]
+        try:
+            return [node for node in self.children if node.key == key][0]
+        except IndexError:
+            raise KeyError("Key does not exist in children: ", key)

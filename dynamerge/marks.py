@@ -9,18 +9,22 @@ TreePath = tuple[str | int, ...]
 class MarkupParser:
     def __init__(self, base_dict: dict):
         self._base_dict = base_dict
-        self.merge_policy_tree = MergePolicyNode("root", MergePolicy())
+        self.merge_policy_tree = None
         self.lazy_value_map: LazyMap = None
         self.lazy_value_graph: LazyGraph = None
 
     def parse_tree(self):
         """Parse a dict-tree structure and return result with relevant data"""
-        self._recursive_parse("root", self._base_dict)
+        self.merge_policy_tree = self._recursive_parse(
+            ("root",), self._base_dict, MergePolicy()
+        )
         return MarkupParserResult(
             self.merge_policy_tree, self.lazy_value_map, self.lazy_value_graph
         )
 
-    def _recursive_parse(self, path: TreePath, value: dict | list | Any, ):
+    def _recursive_parse(
+        self, path: TreePath, value: dict | list | Any, parent_merge_policy: MergePolicy
+    ):
         # NOTE: this strategy traverse this level twice: one for parsing scope
         # marks and other for recursing inside containers.
         # It is possible to do in one round, but care should be taken to not
@@ -28,17 +32,25 @@ class MarkupParser:
         # the one after removing the marks).
         if isinstance(value, dict):
             mark_list = ScopeParser.parse_from_dict(value)
-            merge_policy = MergePolicy().load_from_mark_list(mark_list)
-            node = MergePolicyNode(path[-1], merge_policy)
-            for k, v in value:
-                node.add_child(self._recursive_parse(path + k, v))
+            result_pair = self._merge_policy_override_process(
+                parent_merge_policy, mark_list, path
+            )
+            current_merge_policy, next_merge_policy = result_pair
+            node = MergePolicyNode(path[-1], current_merge_policy)
+            for k, v in value.items():
+                node.add_child(
+                    self._recursive_parse(path + tuple(k), v, next_merge_policy)
+                )
             return node
         elif isinstance(value, list):
             mark_list = ScopeParser.parse_from_list(value)
-            merge_policy = MergePolicy().load_from_mark_list(mark_list)
-            node = MergePolicyNode(path[-1], merge_policy)
+            result_pair = self._merge_policy_override_process(
+                parent_merge_policy, mark_list, path
+            )
+            current_merge_policy, next_merge_policy = result_pair
+            node = MergePolicyNode(path[-1], current_merge_policy)
             for k, v in enumerate(value):
-                self._recursive_parse(path + k, v)
+                self._recursive_parse(path + type(k), v, next_merge_policy)
             return node
         elif is_token_string(value):
             token_list = TokenParser.parse(value)
@@ -49,6 +61,18 @@ class MarkupParser:
         else:
             node = MergePolicyNode(path[-1], MergePolicy())
             return node
+
+    def _merge_policy_override_process(
+        self, parent_merge_policy, mark_list, path
+    ) -> tuple(MergePolicy, MergePolicy):
+        # will be used in this level (contain non-inheritable path-specific policy)
+        current_merge_policy = MergePolicy().inherit_load(parent_merge_policy)
+        current_merge_policy.load_from_path_map(path)
+        current_merge_policy.load_from_mark_list(mark_list)
+        # will be used as inheritance base for subsequent levels
+        next_merge_policy = MergePolicy().inherit_load(parent_merge_policy)
+        next_merge_policy.load_from_mark_list(mark_list)
+        return current_merge_policy, next_merge_policy
 
     def _backtrack_merge_policies(self, path: TreePath):
         """
@@ -62,7 +86,7 @@ def is_token_string(value: Any):
     """
     Consider strings starting with "@" as token-strings, which will be parsed.
     """
-    return (isinstance(value, str) and value.startswith("@"))
+    return isinstance(value, str) and value.startswith("@")
 
 
 @dataclasses.dataclass
@@ -79,7 +103,7 @@ class LazyMap:
 
 
 # (key-path, [dep1, dep2, ...])
-GraphEdge = tuple(str | int, list[str | int])
+GraphEdge = tuple[str | int, list[str | int]]
 
 
 class LazyGraph:
@@ -165,7 +189,7 @@ class ScopeParser:
                 mark_list.append(("merge_unique", True))
             elif value.startswith("dynaconf_id_key="):
                 list_data.pop(i)
-                mark_list.append(("dict_id_key", value[value.find("=") + 1:]))
+                mark_list.append(("dict_id_key", value[value.find("=") + 1 :]))
             elif value in ("@empty"):
                 list_data[i] = None
         return mark_list
@@ -199,14 +223,12 @@ class TokenParser:
             elif capture_mode == "token_arg":
                 if char == "@":
                     capture_mode = "token_word"
-                    token_list.append(
-                        ("".join(token_word), "".join(token_arg[:-1])))
+                    token_list.append(("".join(token_word), "".join(token_arg[:-1])))
                     token_word.clear()
                     token_arg.clear()
                 else:
                     token_arg.append(char)
-        token_list.append(
-            ("".join(token_word), "".join(token_arg)))
+        token_list.append(("".join(token_word), "".join(token_arg)))
         token_word.clear()
         token_arg.clear()
         token_list = token_list
