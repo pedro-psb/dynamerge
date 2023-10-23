@@ -3,32 +3,70 @@ from typing import Any
 from dynamerge.merge_policy import MergePolicy, MergePolicyNode
 import dataclasses
 
+TreePath = tuple[str | int, ...]
+
 
 class MarkupParser:
     def __init__(self, base_dict: dict):
         self._base_dict = base_dict
-        self.merge_policy_tree: MergePolicyNode = None
+        self.merge_policy_tree = MergePolicyNode("root", MergePolicy())
         self.lazy_value_map: LazyMap = None
         self.lazy_value_graph: LazyGraph = None
 
     def parse_tree(self):
         """Parse a dict-tree structure and return result with relevant data"""
-        self._recursive_parse(self._base_dict)
-        return ParseResult(
+        self._recursive_parse("root", self._base_dict)
+        return MarkupParserResult(
             self.merge_policy_tree, self.lazy_value_map, self.lazy_value_graph
         )
 
-    def _recursive_parse(self, obj: dict | list | Any):
-        if isinstance(obj, dict):
-            ...
-        elif isinstance(obj, list):
-            ...
+    def _recursive_parse(self, path: TreePath, value: dict | list | Any, ):
+        # NOTE: this strategy traverse this level twice: one for parsing scope
+        # marks and other for recursing inside containers.
+        # It is possible to do in one round, but care should be taken to not
+        # mess with index values. The index passed to the recursion should be
+        # the one after removing the marks).
+        if isinstance(value, dict):
+            mark_list = ScopeParser.parse_from_dict(value)
+            merge_policy = MergePolicy().load_from_mark_list(mark_list)
+            node = MergePolicyNode(path[-1], merge_policy)
+            for k, v in value:
+                node.add_child(self._recursive_parse(path + k, v))
+            return node
+        elif isinstance(value, list):
+            mark_list = ScopeParser.parse_from_list(value)
+            merge_policy = MergePolicy().load_from_mark_list(mark_list)
+            node = MergePolicyNode(path[-1], merge_policy)
+            for k, v in enumerate(value):
+                self._recursive_parse(path + k, v)
+            return node
+        elif is_token_string(value):
+            token_list = TokenParser.parse(value)
+            process_result = TokenProcessor.process(token_list)
+            merge_policy = process_result.merge_policy
+            node = MergePolicyNode(path[-1], merge_policy)
+            return node
         else:
-            ...
+            node = MergePolicyNode(path[-1], MergePolicy())
+            return node
+
+    def _backtrack_merge_policies(self, path: TreePath):
+        """
+        When a merge=true is found after a merge=false, all ancestors which
+        have merge=false must be turned into merge=true, until
+        (and excluding) root.
+        """
+
+
+def is_token_string(value: Any):
+    """
+    Consider strings starting with "@" as token-strings, which will be parsed.
+    """
+    return (isinstance(value, str) and value.startswith("@"))
 
 
 @dataclasses.dataclass
-class ParseResult:
+class MarkupParserResult:
     merge_policy_tree: Any
     lazy_value_map: LazyMap
     lazy_value_graph: LazyGraph
@@ -36,23 +74,39 @@ class ParseResult:
 
 class LazyMap:
     """
-    Represents key-value pair (path, LazyValue).
+    Represents key-value pair(path, LazyValue).
     """
+
+
+# (key-path, [dep1, dep2, ...])
+GraphEdge = tuple(str | int, list[str | int])
 
 
 class LazyGraph:
     """
-    given paths a,b,c and dependencies:
-    a <- b
-    b <- c
+    given paths a, b, c and dependencies:
+    a < - b
+    b < - c
 
-    lazy_graph is:
+    lazy_graph is :
     {
         a: [b],
         b: [c],
         c: []
     }
     """
+
+    def __init__(self):
+        self._graph = {}
+
+    def add(self, path: TreePath, *dependencies: list[TreePath]):
+        self._graph[path] = dependencies
+
+    def remove(self, path: TreePath):
+        del self._graph[path]
+
+    def iterate(self):
+        ...
 
 
 class ScopeParser:
@@ -61,8 +115,8 @@ class ScopeParser:
     @staticmethod
     def parse_container(container: dict | list):
         """
-        Parse dynaconf_marks from within container (dict or list).
-        Return list of (mark_attr, new_value) tuples.
+        Parse dynaconf_marks from within container(dict or list).
+        Return list of(mark_attr, new_value) tuples.
         """
         mark_list = []
         if isinstance(container, dict):
@@ -74,8 +128,8 @@ class ScopeParser:
     @staticmethod
     def parse_from_dict(dict_data: dict) -> list:
         """
-        Parse and pop/mutates (when applicable) dynaconf marks from a dict and
-        return list of (mark_attr, new_value) tuples.
+        Parse and pop/mutates(when applicable) dynaconf marks from a dict and
+        return list of(mark_attr, new_value) tuples.
         """
         mark_list = []
         merge = dict_data.pop("dynaconf_merge", None)
@@ -90,8 +144,8 @@ class ScopeParser:
     @staticmethod
     def parse_from_list(list_data: list) -> list:
         """
-        Parse and pop/mutates (when applicable) dynaconf marks from a list and
-        return list of (mark_attr, new_value) tuples.
+        Parse and pop/mutates(when applicable) dynaconf marks from a list and
+        return list of(mark_attr, new_value) tuples.
         """
         mark_list = []
         # reverse loop
@@ -126,10 +180,9 @@ class TokenParser:
     def parse(string: str) -> list[tuple[str, str]]:
         """
         Parse tokens in form Token + Optional[argument]:
-            @token_a [args_a] [@token_b [args_b]] ...
-
+            @token_a[args_a][@token_b[args_b]] ...
         Example:
-            >>> TokenParser.parses("@foo @bar spam")
+            >> > TokenParser.parses("@foo @bar spam")
             (('foo', ''), ('bar', 'spam')
         """
         token_word = []
@@ -158,3 +211,17 @@ class TokenParser:
         token_arg.clear()
         token_list = token_list
         return token_list
+
+
+class TokenProcessor:
+    @staticmethod
+    def process(token_list: list[tuple(int, int)]) -> TokenProcessResult:
+        result = TokenProcessResult()
+        result.merge_policy = MergePolicy()
+        return result
+
+
+@dataclasses.dataclass
+class TokenProcessResult:
+    merge_policy: MergePolicy = None
+    lazy_dependencies: GraphEdge = None
